@@ -2,9 +2,10 @@
 import { useState } from 'react';
 import { Player, Recommendation } from '@/types';
 import { useAuctionStore } from '@/stores/auctionStore';
+import { QuickAssignModal } from '@/components/Modals/QuickAssignModal';
 import { 
   TrendingUp, TrendingDown, Minus, AlertTriangle, 
-  Heart, Star, Target, Users, Coins 
+  Heart, Star, Target, Users, Coins, MoreVertical 
 } from 'lucide-react';
 import clsx from 'clsx';
 import toast from 'react-hot-toast';
@@ -16,6 +17,7 @@ interface PlayerCardProps {
 export function PlayerCard({ player }: PlayerCardProps) {
   const [purchasePrice, setPurchasePrice] = useState<string>('');
   const [otherOwner, setOtherOwner] = useState<string>('');
+  const [showQuickAssign, setShowQuickAssign] = useState(false);
   
   const { calculateMaxPrice, purchasePlayer, budgetRemaining } = useAuctionStore();
   
@@ -247,6 +249,13 @@ export function PlayerCard({ player }: PlayerCardProps) {
             >
               👥 Altri
             </button>
+            <button
+              onClick={() => setShowQuickAssign(true)}
+              className="p-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition"
+              title="Assegnazione rapida"
+            >
+              <MoreVertical size={18} />
+            </button>
           </div>
           
           {/* Suggerimento prezzo */}
@@ -257,6 +266,14 @@ export function PlayerCard({ player }: PlayerCardProps) {
           )}
         </div>
       </div>
+      
+      {/* Quick Assign Modal */}
+      {showQuickAssign && (
+        <QuickAssignModal 
+          player={player} 
+          onClose={() => setShowQuickAssign(false)} 
+        />
+      )}
     </div>
   );
 }
