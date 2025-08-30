@@ -1,14 +1,16 @@
 // src/components/PlayerCard/PlayerCard.tsx
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Player, Recommendation } from '@/types';
 import { useAuctionStore } from '@/stores/auctionStore';
 import { QuickAssignModal } from '@/components/Modals/QuickAssignModal';
 import { 
   TrendingUp, TrendingDown, Minus, AlertTriangle, 
-  Heart, Star, Target, Users, Coins, MoreVertical 
+  Heart, Star, Target, Users, Coins, MoreVertical,
+  BookOpen, Eye, Plus
 } from 'lucide-react';
 import clsx from 'clsx';
 import toast from 'react-hot-toast';
+import { AddToWatchlist } from '../Watchlist/AddToWatchlist';
 
 interface PlayerCardProps {
   player: Player;
@@ -19,13 +21,27 @@ export function PlayerCard({ player }: PlayerCardProps) {
   const [otherOwner, setOtherOwner] = useState<string>('');
   const [showQuickAssign, setShowQuickAssign] = useState(false);
   
-  const { calculateMaxPrice, purchasePlayer, budgetRemaining } = useAuctionStore();
+  const { 
+    calculateMaxPrice, 
+    purchasePlayer, 
+    budgetRemaining,
+    getPlayerNotes,
+    watchlists,
+    isPlayerInWatchlist,
+    addToWatchlist,
+    removeFromWatchlist
+  } = useAuctionStore();
   
   const maxPrice = calculateMaxPrice(player);
+  const playerNotes = useMemo(() => getPlayerNotes(player.id), [player.id, getPlayerNotes]);
+  
+  // Controlla in quali watchlist è presente il giocatore
+  const playerWatchlists = useMemo(() => {
+    return watchlists.filter(w => isPlayerInWatchlist(player.id, w.id));
+  }, [watchlists, player.id, isPlayerInWatchlist]);
   
   // Calcola raccomandazione migliorata
   const getRecommendation = (): Recommendation => {
-    // Se abbiamo il fantaindex, usalo per affinare la decisione
     if (player.fantaindex) {
       const score = (player.convenienzaPotenziale + player.fantaindex) / 2;
       if (score > 75) return 'COMPRA';
@@ -33,7 +49,6 @@ export function PlayerCard({ player }: PlayerCardProps) {
       return 'LASCIA';
     }
     
-    // Altrimenti usa solo la convenienza potenziale
     if (player.convenienzaPotenziale > 70) return 'COMPRA';
     if (player.convenienzaPotenziale > 50) return 'VALUTA';
     return 'LASCIA';
@@ -76,12 +91,52 @@ export function PlayerCard({ player }: PlayerCardProps) {
         <div>
           <h2 className="text-2xl font-bold">{player.nome}</h2>
           <p className="opacity-90">{player.squadra} - Ruolo: {player.ruolo}</p>
+          
+          {/* Indicatori Note e Watchlist */}
+          <div className="flex gap-2 mt-2">
+            {playerNotes.length > 0 && (
+              <span className="inline-flex items-center gap-1 px-2 py-1 bg-white/20 rounded-full text-sm">
+                <BookOpen size={14} />
+                {playerNotes.length} note
+              </span>
+            )}
+            {playerWatchlists.length > 0 && (
+              <span className="inline-flex items-center gap-1 px-2 py-1 bg-white/20 rounded-full text-sm">
+                <Eye size={14} />
+                In {playerWatchlists.length} watchlist
+              </span>
+            )}
+          </div>
         </div>
         <div className="text-center">
           <div className="text-4xl mb-1">{recommendationConfig[recommendation].icon}</div>
           <div className="text-xl font-bold">{recommendationConfig[recommendation].text}</div>
         </div>
       </div>
+      
+      {/* Watchlist badges */}
+      {playerWatchlists.length > 0 && (
+        <div className="px-6 py-3 bg-gray-50 border-b flex gap-2 flex-wrap">
+          {playerWatchlists.slice(0, 3).map(watchlist => (
+            <span
+              key={watchlist.id}
+              className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm"
+              style={{ 
+                backgroundColor: `${watchlist.color}20`,
+                color: watchlist.color
+              }}
+            >
+              <span>{watchlist.icon}</span>
+              {watchlist.name}
+            </span>
+          ))}
+          {playerWatchlists.length > 3 && (
+            <span className="inline-flex items-center px-2 py-1 rounded-full text-sm bg-gray-200 text-gray-600">
+              +{playerWatchlists.length - 3}
+            </span>
+          )}
+        </div>
+      )}
       
       {/* Statistiche principali */}
       <div className="p-6">
@@ -180,8 +235,30 @@ export function PlayerCard({ player }: PlayerCardProps) {
           )}
         </div>
         
+        {/* Note Summary */}
+        {playerNotes.length > 0 && (
+          <div className="mb-6 p-4 bg-purple-50 rounded-lg">
+            <h4 className="font-semibold text-sm text-purple-800 mb-2 flex items-center gap-2">
+              <BookOpen size={16} />
+              Riepilogo Note ({playerNotes.length})
+            </h4>
+            <div className="space-y-1">
+              {playerNotes.slice(0, 2).map(note => (
+                <p key={note.id} className="text-sm text-purple-700">
+                  • {note.content.substring(0, 100)}...
+                </p>
+              ))}
+              {playerNotes.length > 2 && (
+                <p className="text-sm text-purple-600 italic">
+                  +{playerNotes.length - 2} altre note disponibili
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+        
         {/* Statistiche aggiuntive se disponibili */}
-                  {(player.xG || player.xA || player.fantaindex) && (
+        {(player.xG || player.xA || player.fantaindex) && (
           <div className="mb-6 p-4 bg-gray-50 rounded-lg">
             <h4 className="font-semibold text-sm text-gray-600 mb-2">Metriche avanzate</h4>
             <div className="grid grid-cols-2 gap-4">
@@ -249,6 +326,13 @@ export function PlayerCard({ player }: PlayerCardProps) {
             >
               👥 Altri
             </button>
+
+            <AddToWatchlist 
+              player={player} 
+              variant="dropdown"
+              size="md"
+            />
+            
             <button
               onClick={() => setShowQuickAssign(true)}
               className="p-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition"

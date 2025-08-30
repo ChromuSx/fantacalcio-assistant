@@ -2,6 +2,7 @@
 import { useState, useMemo } from 'react';
 import { Search } from 'lucide-react';
 import { useAuctionStore } from '@/stores/auctionStore';
+import { AddToWatchlist } from '@/components/Watchlist/AddToWatchlist';  // 👈 NUOVO IMPORT
 import Fuse from 'fuse.js';
 
 export function SearchBar() {
@@ -40,20 +41,40 @@ export function SearchBar() {
           {searchResults.map(({ item }) => (
             <div
               key={item.id}
-              onClick={() => {
-                selectPlayer(item);
-                setQuery('');
-              }}
-              className="px-4 py-3 hover:bg-purple-50 cursor-pointer border-b border-gray-100 last:border-b-0"
+              className="px-4 py-3 hover:bg-purple-50 border-b border-gray-100 last:border-b-0"
             >
               <div className="flex justify-between items-center">
-                <div>
-                  <p className="font-semibold">{item.nome}</p>
-                  <p className="text-sm text-gray-600">{item.squadra} - {item.ruolo}</p>
+                {/* 👇 MODIFICATO: Wrappato in div con flex-1 per lasciare spazio */}
+                <div 
+                  className="flex-1 cursor-pointer"
+                  onClick={() => {
+                    selectPlayer(item);
+                    setQuery('');
+                  }}
+                >
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <p className="font-semibold">{item.nome}</p>
+                      <p className="text-sm text-gray-600">{item.squadra} - {item.ruolo}</p>
+                    </div>
+                    <div className="text-right mr-3">
+                      <p className="font-bold text-purple-600">{item.convenienzaPotenziale.toFixed(1)}</p>
+                      <p className="text-xs text-gray-500">Convenienza</p>
+                    </div>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <p className="font-bold text-purple-600">{item.convenienzaPotenziale.toFixed(1)}</p>
-                  <p className="text-xs text-gray-500">Convenienza</p>
+                
+                {/* 👇 NUOVO: Pulsante AddToWatchlist */}
+                <div className="ml-2 border-l pl-2">
+                  <AddToWatchlist 
+                    player={item}
+                    variant="dropdown"
+                    size="sm"
+                    onSuccess={() => {
+                      // Opzionale: chiudi la ricerca dopo aver aggiunto
+                      // setQuery('');
+                    }}
+                  />
                 </div>
               </div>
             </div>

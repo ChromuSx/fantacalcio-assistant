@@ -87,3 +87,42 @@ export interface PriceCalculation {
     fantaMedia: number;
   };
 }
+export interface PlayerNote {
+  id: string;
+  playerId: number;
+  type: 'auto' | 'manual' | 'mixed';
+  category: 'opportunity' | 'warning' | 'tactical' | 'statistical';
+  content: string;
+  confidence: number;  // 0-100
+  source: string[];    // ['fpedia', 'fstats', 'user']
+  editable: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface Watchlist {
+  id: string;
+  name: string;
+  type: 'auto' | 'manual';
+  description: string;
+  criteria?: WatchlistCriteria;
+  playerIds: number[];
+  priority: number;
+  color: string;
+  icon: string;
+}
+
+export interface WatchlistCriteria {
+  minConvenienza?: number;
+  maxConvenienza?: number;
+  trend?: Trend;
+  infortunato?: boolean;
+  nuovoAcquisto?: boolean;
+  minFantamedia?: number;
+  maxFantamedia?: number;
+  minGoals?: number;
+  minAssists?: number;
+  minxG?: number;
+  minFantaindex?: number;
+  maxPrice?: number;
+}
