@@ -3,6 +3,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { Player, Team, AuctionConfig, Role, PlayerStatus, PlayerNote, Watchlist } from '@/types';
 import { NotesGenerator } from '@/utils/notesGenerator';
+import { alertSystem } from '@/utils/alertSystem';
 
 interface AuctionStore {
   // Configurazione
@@ -105,6 +106,7 @@ export const useAuctionStore = create<AuctionStore>()(
       
       // Acquisto giocatore
       purchasePlayer: (player, price, owner = 'me') => set((state) => {
+        alertSystem.recordPurchase(player, price, owner);
         const updatedPlayers = state.players.map(p => 
           p.id === player.id 
             ? { 

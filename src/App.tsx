@@ -12,15 +12,20 @@ import { RoleFilter } from '@/components/Filters/RoleFilter';
 import { WatchlistPanel } from '@/components/Watchlist/WatchlistPanel';
 import { useAuctionStore } from '@/stores/auctionStore';
 import { useHotkeys } from '@/hooks/useHotkeys';
-import { BarChart, Users, TrendingUp, Eye, BookOpen, Lightbulb } from 'lucide-react';
+import { BarChart, Users, TrendingUp, Eye, BookOpen, Lightbulb, Settings } from 'lucide-react';
 import clsx from 'clsx';
 import toast from 'react-hot-toast';
+import { AlertPanel } from '@/components/Alerts/AlertPanel';
+import { AlertSettings } from '@/components/Alerts/AlertSettings';
+import { DEFAULT_ALERT_CONFIG } from '@/config/alertConfig';
 
 function App() {
   const [showImportModal, setShowImportModal] = useState(false);
   const [activeView, setActiveView] = useState<'auction' | 'teams' | 'stats' | 'watchlist'>('auction');
   const [showNotesHint, setShowNotesHint] = useState(true);
-  
+  const [alertConfig, setAlertConfig] = useState(DEFAULT_ALERT_CONFIG);
+  const [showAlertSettings, setShowAlertSettings] = useState(false);
+
   const { 
     players, 
     notes, 
@@ -207,9 +212,23 @@ function App() {
               <div className="col-span-4 space-y-6">
                 <SidePanel />
                 <RoleFilter />
+                <button
+                  onClick={() => setShowAlertSettings(true)}
+                  className="w-full px-4 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition flex items-center justify-center gap-2"
+                >
+                  <Settings size={18} />
+                  Configura Alert
+                </button>
               </div>
             </>
           )}
+
+          <AlertSettings
+            isOpen={showAlertSettings}
+            onClose={() => setShowAlertSettings(false)}
+            config={alertConfig}
+            onSave={setAlertConfig}
+          />
           
           {/* Vista Watchlist */}
           {activeView === 'watchlist' && (
