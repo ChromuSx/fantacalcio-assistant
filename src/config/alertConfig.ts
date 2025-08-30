@@ -161,7 +161,10 @@ export const getStyleMessage = (playStyle: AlertConfig['playStyle'], situation: 
 export class AlertFactory {
   constructor(private config: AlertConfig) {}
   
-  adjustPriority(basePriority: number, category: SmartAlert['category']): number {
+  adjustPriority(
+    basePriority: number,
+    category: keyof AlertConfig['priorityWeights']
+  ): number {
     const weight = this.config.priorityWeights[category] || 1;
     return Math.round(basePriority * weight);
   }
@@ -198,7 +201,7 @@ export class AlertFactory {
         if (value >= thresholds.priceInflation.high) 
           return { generate: true, level: 'warning' };
         if (value <= thresholds.priceInflation.low) 
-          return { generate: true, level: 'opportunity' };
+          return { generate: true, level: 'info' };
         break;
     }
     

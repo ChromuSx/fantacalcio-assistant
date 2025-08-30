@@ -203,25 +203,27 @@ function App() {
         <SearchBar />
         
         <div className="grid grid-cols-12 gap-6 mt-6">
-          {/* Vista Asta */}
-          {activeView === 'auction' && (
-            <>
-              <div className="col-span-8">
-                <MainPanel />
-              </div>
-              <div className="col-span-4 space-y-6">
-                <SidePanel />
-                <RoleFilter />
-                <button
-                  onClick={() => setShowAlertSettings(true)}
-                  className="w-full px-4 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition flex items-center justify-center gap-2"
-                >
-                  <Settings size={18} />
-                  Configura Alert
-                </button>
-              </div>
-            </>
-          )}
+        {/* Vista Asta */}
+        {activeView === 'auction' && (
+          <>
+            <div className="col-span-8 space-y-6">
+              {/* AGGIUNGI QUESTA RIGA */}
+              <AlertPanel config={alertConfig} />
+              <MainPanel />
+            </div>
+            <div className="col-span-4 space-y-6">
+              <SidePanel />
+              <RoleFilter />
+              <button
+                onClick={() => setShowAlertSettings(true)}
+                className="w-full px-4 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition flex items-center justify-center gap-2"
+              >
+                <Settings size={18} />
+                Configura Alert
+              </button>
+            </div>
+          </>
+        )}
 
           <AlertSettings
             isOpen={showAlertSettings}

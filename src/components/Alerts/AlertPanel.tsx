@@ -10,8 +10,13 @@ import clsx from 'clsx';
 import { alertSystem, SmartAlert } from '@/utils/alertSystem';
 import { useAuctionStore } from '@/stores/auctionStore';
 import toast from 'react-hot-toast';
+import { AlertConfig, DEFAULT_ALERT_CONFIG } from '@/config/alertConfig';
 
-export function AlertPanel() {
+interface AlertPanelProps {
+  config?: AlertConfig;
+}
+
+export function AlertPanel({ config = DEFAULT_ALERT_CONFIG }: AlertPanelProps) {
   const [alerts, setAlerts] = useState<SmartAlert[]>([]);
   const [isExpanded, setIsExpanded] = useState(true);
   const [filterLevel, setFilterLevel] = useState<'all' | SmartAlert['level']>('all');
@@ -23,6 +28,8 @@ export function AlertPanel() {
   // Polling per nuovi alert
   useEffect(() => {
     const updateAlerts = () => {
+        alertSystem.setConfig(config);
+
       // Genera alert contestuali
       const contextAlerts = alertSystem.analyzeCurrentState();
       const predictiveAlerts = alertSystem.generatePredictiveAlerts();
@@ -63,7 +70,7 @@ export function AlertPanel() {
     const interval = setInterval(updateAlerts, 5000); // Aggiorna ogni 5 secondi
     
     return () => clearInterval(interval);
-  }, [alerts, dismissedIds, selectedPlayer]);
+}, [alerts, dismissedIds, selectedPlayer, config])
   
   const handleDismiss = useCallback((alertId: string) => {
     alertSystem.dismissAlert(alertId);

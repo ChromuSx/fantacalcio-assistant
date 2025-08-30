@@ -1,6 +1,7 @@
 // src/utils/alertSystem.ts
 import { Player, Role, AuctionConfig } from '@/types';
 import { useAuctionStore } from '@/stores/auctionStore';
+import { AlertConfig, DEFAULT_ALERT_CONFIG } from '@/config/alertConfig';
 
 // Tipi per il sistema di alert
 export interface SmartAlert {
@@ -60,9 +61,14 @@ export class AlertIntelligence {
   private purchaseHistory: Array<{player: Player; price: number; owner: string; timestamp: Date}> = [];
   private marketMetrics: MarketMetrics;
   private alertIdCounter = 0;
-  
+  private config: AlertConfig = DEFAULT_ALERT_CONFIG;
+
   constructor() {
     this.marketMetrics = this.initializeMetrics();
+  }
+
+  setConfig(config: AlertConfig) {
+    this.config = config;
   }
   
   private initializeMetrics(): MarketMetrics {
@@ -241,7 +247,7 @@ export class AlertIntelligence {
     const slotsInfo = state.getSlotsInfo();
     
     // 1. BUDGET ALERTS
-    if (state.budgetRemaining < 50 && state.budgetRemaining > 0) {
+    if (state.budgetRemaining < this.config.thresholds.budget.warning && state.budgetRemaining > 0) {
       const totalSlotsRemaining = Object.values(slotsInfo)
         .reduce((sum, info) => sum + info.remaining, 0);
       
@@ -265,7 +271,10 @@ export class AlertIntelligence {
     
     // 2. SCARCITY ALERTS
     Object.entries(this.marketMetrics.scarcityIndex).forEach(([role, scarcity]) => {
-      if (scarcity > 0.7 && slotsInfo[role as Role].remaining > 0) {
+      if (scarcity > this.config.thresholds.scarcity.warning && slotsInfo[role as Role].remaining > 0) {
+        const basePriority = scarcity > this.config.thresholds.scarcity.critical ? 9 : 7;
+        const adjustedPriority = Math.round(basePriority * this.config.priorityWeights.scarcity);
+        
         const topRemaining = this.marketMetrics.topPlayersRemaining[role as Role];
         newAlerts.push({
           id: this.generateAlertId(),
@@ -275,7 +284,7 @@ export class AlertIntelligence {
           title: `🚨 Scarsità ${role}`,
           message: `Solo ${topRemaining} top player ${role} disponibili! Agisci ora o dovrai ripiegare`,
           confidence: 85,
-          priority: 9,
+          priority: adjustedPriority,
           metadata: { role: role as Role },
           actionable: {
             suggestion: `Visualizza migliori ${role} disponibili`,
