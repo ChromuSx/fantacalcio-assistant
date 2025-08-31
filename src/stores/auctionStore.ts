@@ -380,6 +380,8 @@ export const useAuctionStore = create<AuctionStore>()(
         );
       },
 
+      // Aggiornamento della funzione calculateMaxPrice in src/stores/auctionStore.ts
+
       calculateMaxPrice: (player) => {
         const state = get();
         const slotsInfo = state.getSlotsInfo();
@@ -392,24 +394,54 @@ export const useAuctionStore = create<AuctionStore>()(
         if (totalSlotsRemaining === 0) return 0;
 
         const avgBudgetPerSlot = state.budgetRemaining / totalSlotsRemaining;
-        const convenienceMultiplier = Math.min(
-          player.convenienzaPotenziale / 50,
-          2
-        );
-        let basePrice = avgBudgetPerSlot * convenienceMultiplier;
+        let basePrice = avgBudgetPerSlot;
 
         // Se abbiamo la quotazione, usiamola come riferimento
         if (player.quotazione && player.quotazione > 0) {
-          // Il prezzo base parte dalla quotazione
           basePrice = player.quotazione;
 
           // Aggiusta in base al rapporto valore/prezzo se disponibile
           if (player.valorePrezzo) {
             basePrice = basePrice * (1 + player.valorePrezzo / 100);
           }
+        } else {
+          // Se non c'è quotazione, usa la convenienza come moltiplicatore
+          const convenienceMultiplier = Math.min(
+            player.convenienzaPotenziale / 50,
+            2
+          );
+          basePrice = avgBudgetPerSlot * convenienceMultiplier;
         }
 
-        // Aggiustamenti base
+        // NUOVI AGGIUSTAMENTI basati su Score Affare e Indici
+        if (player.scoreAffare) {
+          if (player.scoreAffare > 90) {
+            basePrice *= 1.25; // Super affare, vale la pena pagare di più
+          } else if (player.scoreAffare > 80) {
+            basePrice *= 1.15;
+          } else if (player.scoreAffare > 70) {
+            basePrice *= 1.05;
+          } else if (player.scoreAffare < 50) {
+            basePrice *= 0.85; // Score basso, riduci il prezzo
+          }
+        }
+
+        if (player.indiceAggiustato) {
+          if (player.indiceAggiustato > 90) {
+            basePrice *= 1.2; // Performance elite
+          } else if (player.indiceAggiustato > 75) {
+            basePrice *= 1.1;
+          } else if (player.indiceAggiustato < 50) {
+            basePrice *= 0.9;
+          }
+        }
+
+        // Considera l'affidabilità dei dati
+        if (player.affidabilitaDati && player.affidabilitaDati < 80) {
+          basePrice *= 0.95; // Riduci leggermente se i dati non sono completamente affidabili
+        }
+
+        // Aggiustamenti esistenti
         if (player.infortunato) basePrice *= 0.7;
         if (player.nuovoAcquisto) basePrice *= 0.85;
         if (player.trend === "UP") basePrice *= 1.1;
@@ -428,6 +460,17 @@ export const useAuctionStore = create<AuctionStore>()(
         if (player.goalsMax && player.goalsMax > 15) basePrice *= 1.2;
         if (player.assistsMax && player.assistsMax > 8) basePrice *= 1.15;
 
+        // Bonus per skills importanti
+        if (player.skills && player.skills.length > 0) {
+          const hasRigorista = player.skills.includes("Rigorista");
+          const hasFuoriclasse = player.skills.includes("Fuoriclasse");
+          const hasTitolare = player.skills.includes("Titolare");
+
+          if (hasRigorista) basePrice *= 1.1;
+          if (hasFuoriclasse) basePrice *= 1.15;
+          if (hasTitolare) basePrice *= 1.05;
+        }
+
         // Aggiustamento per ruolo e scarsità
         const roleInfo = slotsInfo[player.ruolo];
         if (roleInfo) {
@@ -435,8 +478,13 @@ export const useAuctionStore = create<AuctionStore>()(
           if (roleInfo.remaining === 0) return 0;
         }
 
-        // Mai più del 40% del budget rimanente per un singolo giocatore
-        return Math.round(Math.min(basePrice, state.budgetRemaining * 0.4));
+        // Limite massimo: mai più del 40% del budget rimanente per un singolo giocatore
+        // Ma se è un super affare (scoreAffare > 90), aumenta il limite al 50%
+        const maxBudgetPercentage =
+          player.scoreAffare && player.scoreAffare > 90 ? 0.5 : 0.4;
+        return Math.round(
+          Math.min(basePrice, state.budgetRemaining * maxBudgetPercentage)
+        );
       },
 
       // Ottieni note di un giocatore

@@ -2,7 +2,7 @@
 import { useState, useMemo } from 'react';
 import { Search } from 'lucide-react';
 import { useAuctionStore } from '@/stores/auctionStore';
-import { AddToWatchlist } from '@/components/Watchlist/AddToWatchlist';  // 👈 NUOVO IMPORT
+import { AddToWatchlist } from '@/components/Watchlist/AddToWatchlist';
 import Fuse from 'fuse.js';
 
 export function SearchBar() {
@@ -44,7 +44,6 @@ export function SearchBar() {
               className="px-4 py-3 hover:bg-purple-50 border-b border-gray-100 last:border-b-0"
             >
               <div className="flex justify-between items-center">
-                {/* 👇 MODIFICATO: Wrappato in div con flex-1 per lasciare spazio */}
                 <div 
                   className="flex-1 cursor-pointer"
                   onClick={() => {
@@ -57,14 +56,28 @@ export function SearchBar() {
                       <p className="font-semibold">{item.nome}</p>
                       <p className="text-sm text-gray-600">{item.squadra} - {item.ruolo}</p>
                     </div>
+                    {/* QUESTA È LA MODIFICA - mostra Score Affare se > 80, altrimenti Convenienza */}
                     <div className="text-right mr-3">
-                      <p className="font-bold text-purple-600">{item.convenienzaPotenziale.toFixed(1)}</p>
-                      <p className="text-xs text-gray-500">Convenienza</p>
+                      {item.scoreAffare && item.scoreAffare > 80 ? (
+                        <>
+                          <p className="font-bold text-amber-600">
+                            {item.scoreAffare.toFixed(1)}
+                          </p>
+                          <p className="text-xs text-gray-500">Score Affare</p>
+                        </>
+                      ) : (
+                        <>
+                          <p className="font-bold text-purple-600">
+                            {item.convenienzaPotenziale.toFixed(1)}
+                          </p>
+                          <p className="text-xs text-gray-500">Convenienza</p>
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>
                 
-                {/* 👇 NUOVO: Pulsante AddToWatchlist */}
+                {/* Pulsante AddToWatchlist */}
                 <div className="ml-2 border-l pl-2">
                   <AddToWatchlist 
                     player={item}

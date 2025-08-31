@@ -2,7 +2,7 @@
 import * as XLSX from 'xlsx';
 import { Player, Role, Trend, PlayerStatus } from '@/types';
 
-export async function parseExcelFile(file: File, source: 'fpedia' | 'fstats' = 'fpedia'): Promise<Player[]> {
+export async function parseExcelFile(file: File, sheetName?: string): Promise<Player[]> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     
@@ -11,24 +11,16 @@ export async function parseExcelFile(file: File, source: 'fpedia' | 'fstats' = '
         const data = new Uint8Array(e.target?.result as ArrayBuffer);
         const workbook = XLSX.read(data, { type: 'array' });
         
-        const sheetName = workbook.SheetNames[0];
-        const sheet = workbook.Sheets[sheetName];
+        // Usa il foglio specificato o il primo disponibile
+        const targetSheet = sheetName || workbook.SheetNames[0];
+        const sheet = workbook.Sheets[targetSheet];
         const jsonData = XLSX.utils.sheet_to_json(sheet);
         
-        console.log(`Parsing ${source} data, found ${jsonData.length} rows`);
-        if (jsonData.length > 0) {
-          console.log('First row example:', jsonData[0]);
-        }
+        console.log(`Parsing sheet "${targetSheet}", found ${jsonData.length} rows`);
         
-        const players: Player[] = source === 'fpedia' 
-          ? parseFpediaData(jsonData)
-          : parseFstatsData(jsonData);
+        const players = parseUnifiedData(jsonData);
         
         console.log(`Parsed ${players.length} valid players`);
-        if (players.length > 0) {
-          console.log('First player parsed:', players[0]);
-        }
-        
         resolve(players);
       } catch (error) {
         reject(error);
@@ -40,16 +32,33 @@ export async function parseExcelFile(file: File, source: 'fpedia' | 'fstats' = '
   });
 }
 
-// Funzione helper per normalizzare il ruolo
+// Ottieni la lista dei fogli disponibili
+export async function getSheetNames(file: File): Promise<string[]> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    
+    reader.onload = (e) => {
+      try {
+        const data = new Uint8Array(e.target?.result as ArrayBuffer);
+        const workbook = XLSX.read(data, { type: 'array' });
+        resolve(workbook.SheetNames);
+      } catch (error) {
+        reject(error);
+      }
+    };
+    
+    reader.onerror = () => reject(new Error('Errore lettura file'));
+    reader.readAsArrayBuffer(file);
+  });
+}
+
 function normalizeRole(role: string): Role {
   const normalized = role?.toString().toUpperCase().trim();
   
-  // Prova prima con il valore esatto
   if (['P', 'D', 'C', 'A'].includes(normalized)) {
     return normalized as Role;
   }
   
-  // Prova con il primo carattere
   const firstChar = normalized?.charAt(0);
   switch (firstChar) {
     case 'P': return 'P';
@@ -62,21 +71,45 @@ function normalizeRole(role: string): Role {
   }
 }
 
-function parseFpediaData(jsonData: any[]): Player[] {
+function parseUnifiedData(jsonData: any[]): Player[] {
   return jsonData.map((row: any, index) => {
     // Parsing Gol/Assist previsti (formato "min/max")
     let goalsMin = 0, goalsMax = 0, assistsMin = 0, assistsMax = 0;
     
-    if (row['Gol previsti'] && typeof row['Gol previsti'] === 'string') {
-      const parts = row['Gol previsti'].split('/');
-      goalsMin = parseInt(parts[0]) || 0;
-      goalsMax = parseInt(parts[1]) || goalsMin;
+    if (row['Gol previsti']) {
+      if (typeof row['Gol previsti'] === 'string' && row['Gol previsti'].includes('/')) {
+        const parts = row['Gol previsti'].split('/');
+        goalsMin = parseInt(parts[0]) || 0;
+        goalsMax = parseInt(parts[1]) || goalsMin;
+      } else {
+        goalsMax = parseInt(row['Gol previsti']) || 0;
+        goalsMin = goalsMax;
+      }
     }
     
-    if (row['Assist previsti'] && typeof row['Assist previsti'] === 'string') {
-      const parts = row['Assist previsti'].split('/');
-      assistsMin = parseInt(parts[0]) || 0;
-      assistsMax = parseInt(parts[1]) || assistsMin;
+    if (row['Assist previsti']) {
+      if (typeof row['Assist previsti'] === 'string' && row['Assist previsti'].includes('/')) {
+        const parts = row['Assist previsti'].split('/');
+        assistsMin = parseInt(parts[0]) || 0;
+        assistsMax = parseInt(parts[1]) || assistsMin;
+      } else {
+        assistsMax = parseInt(row['Assist previsti']) || 0;
+        assistsMin = assistsMax;
+      }
+    }
+    
+    // Parsing delle skills (possono essere un array JSON come stringa)
+    let skills = [];
+    if (row['Skills']) {
+      try {
+        if (typeof row['Skills'] === 'string') {
+          skills = JSON.parse(row['Skills'].replace(/'/g, '"'));
+        } else if (Array.isArray(row['Skills'])) {
+          skills = row['Skills'];
+        }
+      } catch (e) {
+        console.warn('Errore parsing skills:', row['Skills']);
+      }
     }
     
     return {
@@ -89,90 +122,51 @@ function parseFpediaData(jsonData: any[]): Player[] {
       quotazione: parseFloat(row['quotazione_attuale']) || 0,
       valorePrezzo: parseFloat(row['Valore_su_Prezzo']) || 0,
       
-      // Dati principali FPEDIA
+      // Dati principali
       convenienzaPotenziale: parseFloat(row['Convenienza Potenziale']) || 0,
       convenienza: parseFloat(row['Convenienza']) || 0,
       punteggio: parseFloat(row['Punteggio']) || 0,
       
       // Fantamedie
-      fantamediaCorrente: parseFloat(row['Fantamedia anno 2024-2025']) || 0,
+      fantamediaCorrente: parseFloat(row['Fantamedia anno 2024-2025']) || 
+                          parseFloat(row['fanta_avg']) || 0,
       fantamediaPrecedente: parseFloat(row['Fantamedia anno 2023-2024']) || 0,
       fantavotoMedio: parseFloat(row['fantavoto_medio']) || 0,
       fmTotGare: parseFloat(row['FM su tot gare 2024-2025']) || 0,
-      presenzeCorrente: parseInt(row['Presenze campionato corrente']) || 0,
-      presenzePrecedente: parseInt(row['Presenze 2024-2025']) || parseInt(row['Partite giocate']) || 0,
+      presenzeCorrente: parseInt(row['Presenze campionato corrente']) || 
+                        parseInt(row['presences']) || 0,
+      presenzePrecedente: parseInt(row['Presenze 2024-2025']) || 0,
       
       // Caratteristiche
+      skills: skills,
       trend: (row['Trend'] || 'STABLE') as Trend,
       infortunato: row['Infortunato'] === true || row['Infortunato'] === 'True',
       nuovoAcquisto: row['Nuovo acquisto'] === true || row['Nuovo acquisto'] === 'True',
       buonInvestimento: parseInt(row['Buon investimento']) || 0,
       resistenzaInfortuni: parseInt(row['Resistenza infortuni']) || 0,
       consigliatoProssimaGiornata: row['Consigliato prossima giornata'] === true,
-      skills: row['Skills'] ? JSON.parse(row['Skills'].replace(/'/g, '"')) : [],
       
-      // Previsioni (con supporto per entrambi i formati)
-      goals: goalsMax || parseInt(row['Gol previsti']) || 0,
-      assists: assistsMax || parseInt(row['Assist previsti']) || 0,
+      // Previsioni
+      goals: parseInt(row['goals']) || goalsMax || 0,
+      assists: parseInt(row['assists']) || assistsMax || 0,
       goalsMin,
       goalsMax,
       assistsMin,
       assistsMax,
       
-      // Stato
-      status: 'available' as PlayerStatus,
-      owner: undefined,
-      paidPrice: undefined
-    };
-  }).filter(p => p.nome && p.ruolo && ['P', 'D', 'C', 'A'].includes(p.ruolo));
-}
-
-function parseFstatsData(jsonData: any[]): Player[] {
-  return jsonData.map((row: any, index) => {
-    // Parsing del campo squadra (può essere un oggetto JSON come stringa)
-    let squadra = row['Squadra'] || '';
-    if (squadra && squadra.includes('uuid')) {
-      try {
-        const squadraObj = JSON.parse(squadra.replace(/'/g, '"'));
-        squadra = squadraObj.name || '';
-      } catch (e) {
-        console.warn('Errore parsing squadra:', squadra);
-      }
-    }
-    
-    return {
-      id: index + 1,
-      nome: row['Nome'] || '',
-      ruolo: normalizeRole(row['Ruolo']),
-      squadra: squadra,
-      
-      // Quotazione e valore
-      quotazione: parseFloat(row['quotazione_attuale']) || 0,
-      valorePrezzo: parseFloat(row['Valore_su_Prezzo']) || 0,
-      
-      // Dati principali FSTATS
-      convenienzaPotenziale: parseFloat(row['Convenienza Potenziale']) || 0,
-      convenienza: parseFloat(row['Convenienza']) || 0,
-      punteggio: 0, // Non presente in FSTATS
-      
-      // Statistiche
-      fantamediaCorrente: parseFloat(row['fanta_avg']) || 0,
-      fantavotoMedio: parseFloat(row['fantavoto_medio']) || 0,
-      presenzeCorrente: parseInt(row['presences']) || 0,
-      
-      // Stats avanzate
-      goals: parseInt(row['goals']) || 0,
-      assists: parseInt(row['assists']) || 0,
+      // Metriche avanzate
       xG: parseFloat(row['xgFromOpenPlays']) || 0,
       xA: parseFloat(row['xA']) || 0,
       yellowCards: parseInt(row['yellowCards']) || 0,
       redCards: parseInt(row['redCards']) || 0,
       fantaindex: parseFloat(row['fantacalcioFantaindex']) || 0,
       
-      // Default values per campi mancanti
-      trend: 'STABLE' as Trend,
-      infortunato: false,
-      nuovoAcquisto: false,
+      // NUOVI CAMPI dal file unificato
+      scoreAffare: parseFloat(row['Score_Affare']) || 0,
+      indiceUnificato: parseFloat(row['Indice_Unificato']) || 0,
+      indiceAggiustato: parseFloat(row['Indice_Aggiustato']) || 0,
+      affidabilitaDati: parseFloat(row['Affidabilita_Dati']) || 100,
+      fonteDati: (row['Fonte_Dati'] || 'Entrambe') as 'Entrambe' | 'fpedia' | 'fstats',
       
       // Stato
       status: 'available' as PlayerStatus,
@@ -182,79 +176,26 @@ function parseFstatsData(jsonData: any[]): Player[] {
   }).filter(p => p.nome && p.ruolo && ['P', 'D', 'C', 'A'].includes(p.ruolo));
 }
 
-export function mergePlayerData(fpediaData: Player[], fstatsData: Player[]): Player[] {
-  // Crea una mappa dei giocatori FSTATS per nome
-  const fstatsMap = new Map<string, Player>();
-  fstatsData.forEach(player => {
-    // Normalizza il nome per il matching (rimuovi spazi extra, converti in lowercase)
-    const normalizedName = player.nome.toLowerCase().trim();
-    fstatsMap.set(normalizedName, player);
-  });
+// Esporta anche una funzione per caricare fogli specifici
+export async function loadSpecificSheets(file: File): Promise<{[key: string]: Player[]}> {
+  const sheetsToLoad = [
+    'Tutti',
+    'Super_Affari',
+    'Top10_Per_Ruolo',
+    'Occasioni_LowCost',
+    'Titolari_Affidabili'
+  ];
   
-  // Merge: parti da FPEDIA (dati più completi) e arricchisci con FSTATS
-  const mergedPlayers = fpediaData.map(fpediaPlayer => {
-    const normalizedName = fpediaPlayer.nome.toLowerCase().trim();
-    const fstatsPlayer = fstatsMap.get(normalizedName);
-    
-    if (fstatsPlayer) {
-      // Trovato match: unisci i dati
-      return {
-        ...fpediaPlayer,
-        // Sovrascrivi/aggiungi dati da FSTATS
-        xG: fstatsPlayer.xG || fpediaPlayer.xG,
-        xA: fstatsPlayer.xA || fpediaPlayer.xA,
-        yellowCards: fstatsPlayer.yellowCards || fpediaPlayer.yellowCards,
-        redCards: fstatsPlayer.redCards || fpediaPlayer.redCards,
-        fantaindex: fstatsPlayer.fantaindex || fpediaPlayer.fantaindex,
-        
-        // Se FSTATS ha dati più aggiornati su gol/assist, usali
-        goals: fstatsPlayer.goals || fpediaPlayer.goals,
-        assists: fstatsPlayer.assists || fpediaPlayer.assists,
-        
-        // Media delle convenienze se entrambe presenti
-        convenienzaPotenziale: fpediaPlayer.convenienzaPotenziale > 0 && fstatsPlayer.convenienzaPotenziale > 0
-          ? (fpediaPlayer.convenienzaPotenziale + fstatsPlayer.convenienzaPotenziale) / 2
-          : fpediaPlayer.convenienzaPotenziale || fstatsPlayer.convenienzaPotenziale,
-        
-        // Prendi la quotazione da FPEDIA se presente, altrimenti da FSTATS
-        quotazione: fpediaPlayer.quotazione || fstatsPlayer.quotazione,
-        
-        // Media del valore/prezzo se presente in entrambi
-        valorePrezzo: fpediaPlayer.valorePrezzo && fstatsPlayer.valorePrezzo
-          ? (fpediaPlayer.valorePrezzo + fstatsPlayer.valorePrezzo) / 2
-          : fpediaPlayer.valorePrezzo || fstatsPlayer.valorePrezzo,
-      };
+  const result: {[key: string]: Player[]} = {};
+  
+  for (const sheetName of sheetsToLoad) {
+    try {
+      const players = await parseExcelFile(file, sheetName);
+      result[sheetName] = players;
+    } catch (e) {
+      console.warn(`Impossibile caricare foglio ${sheetName}:`, e);
     }
-    
-    // Nessun match trovato: ritorna solo dati FPEDIA
-    return fpediaPlayer;
-  });
+  }
   
-  // Aggiungi giocatori che sono solo in FSTATS (non in FPEDIA)
-  fstatsData.forEach(fstatsPlayer => {
-    const normalizedName = fstatsPlayer.nome.toLowerCase().trim();
-    const existsInFpedia = fpediaData.some(
-      fp => fp.nome.toLowerCase().trim() === normalizedName
-    );
-    
-    if (!existsInFpedia) {
-      mergedPlayers.push(fstatsPlayer);
-    }
-  });
-  
-  // Riassegna gli ID per essere sequenziali
-  return mergedPlayers.map((player, index) => ({
-    ...player,
-    id: index + 1
-  }));
-}
-
-// Funzione helper per normalizzare i nomi (utile per matching migliore)
-export function normalizePlayerName(name: string): string {
-  return name
-    .toLowerCase()
-    .trim()
-    .replace(/\s+/g, ' ')  // Rimuovi spazi multipli
-    .replace(/['']/g, "'") // Normalizza apostrofi
-    .replace(/[-–—]/g, '-'); // Normalizza trattini
+  return result;
 }

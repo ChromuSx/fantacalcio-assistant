@@ -1,4 +1,4 @@
-// src/utils/notesGenerator.ts
+// src/utils/notesGenerator.ts (versione aggiornata con nuovi campi)
 import { Player, PlayerNote, Watchlist } from "@/types";
 
 export class NotesGenerator {
@@ -7,7 +7,89 @@ export class NotesGenerator {
     const baseId = `auto-${player.id}`;
     const now = new Date();
 
-    // ANALISI CONVENIENZA + TREND
+    // ANALISI SCORE AFFARE (NUOVO)
+    if (player.scoreAffare) {
+      if (player.scoreAffare > 90) {
+        notes.push({
+          id: `${baseId}-score-affare-top`,
+          playerId: player.id,
+          type: "auto",
+          category: "opportunity",
+          content: `🏆 SUPER AFFARE! Score Affare eccezionale (${player.scoreAffare.toFixed(1)}/100). ${
+            player.affidabilitaDati && player.affidabilitaDati === 100 
+              ? 'Dati completamente affidabili.' 
+              : `Affidabilità dati: ${player.affidabilitaDati}%`
+          } Priorità assoluta per l'asta!`,
+          confidence: player.affidabilitaDati || 90,
+          source: [player.fonteDati || 'Entrambe'],
+          editable: true,
+          createdAt: now,
+          updatedAt: now,
+        });
+      } else if (player.scoreAffare > 80) {
+        notes.push({
+          id: `${baseId}-score-affare-high`,
+          playerId: player.id,
+          type: "auto",
+          category: "opportunity",
+          content: `💎 Ottimo affare (Score: ${player.scoreAffare.toFixed(1)}). Rapporto qualità/prezzo eccellente secondo l'analisi unificata.`,
+          confidence: player.affidabilitaDati || 85,
+          source: [player.fonteDati || 'Entrambe'],
+          editable: true,
+          createdAt: now,
+          updatedAt: now,
+        });
+      }
+    }
+
+    // ANALISI INDICE UNIFICATO (NUOVO)
+    if (player.indiceUnificato && player.indiceAggiustato) {
+      if (player.indiceAggiustato > 90) {
+        notes.push({
+          id: `${baseId}-indice-top`,
+          playerId: player.id,
+          type: "auto",
+          category: "statistical",
+          content: `📊 Performance TOP! Indice Aggiustato: ${player.indiceAggiustato.toFixed(1)}/100 (base: ${player.indiceUnificato.toFixed(1)}). Prestazioni elite secondo le metriche avanzate.`,
+          confidence: 90,
+          source: [player.fonteDati || 'Entrambe'],
+          editable: true,
+          createdAt: now,
+          updatedAt: now,
+        });
+      } else if (player.indiceAggiustato > 75) {
+        notes.push({
+          id: `${baseId}-indice-good`,
+          playerId: player.id,
+          type: "auto",
+          category: "statistical",
+          content: `📈 Indice performance elevato (${player.indiceAggiustato.toFixed(1)}/100). Giocatore sopra la media per il suo ruolo.`,
+          confidence: 85,
+          source: [player.fonteDati || 'Entrambe'],
+          editable: true,
+          createdAt: now,
+          updatedAt: now,
+        });
+      }
+    }
+
+    // AFFIDABILITÀ DATI (NUOVO)
+    if (player.affidabilitaDati && player.affidabilitaDati < 80) {
+      notes.push({
+        id: `${baseId}-data-reliability`,
+        playerId: player.id,
+        type: "auto",
+        category: "warning",
+        content: `⚠️ Affidabilità dati limitata (${player.affidabilitaDati}%). Alcuni dati potrebbero essere incompleti o provenienti da una sola fonte.`,
+        confidence: 100,
+        source: [player.fonteDati || 'Entrambe'],
+        editable: true,
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
+
+    // ANALISI CONVENIENZA + TREND (esistente ma migliorata)
     if (player.convenienzaPotenziale > 75 && player.trend === "UP") {
       notes.push({
         id: `${baseId}-convenienza-top`,
@@ -20,9 +102,9 @@ export class NotesGenerator {
           player.valorePrezzo
             ? `Rapporto valore/prezzo: ${player.valorePrezzo.toFixed(1)}`
             : ""
-        } Priorità assoluta per l'asta!`,
+        } ${player.scoreAffare ? `Score Affare: ${player.scoreAffare.toFixed(1)}` : ''}`,
         confidence: 90,
-        source: ["fpedia"],
+        source: [player.fonteDati || "fpedia"],
         editable: true,
         createdAt: now,
         updatedAt: now,
@@ -39,13 +121,14 @@ export class NotesGenerator {
           player.quotazione ? `Quotato a ${player.quotazione}€.` : ""
         } Consideralo seriamente se il prezzo è giusto.`,
         confidence: 80,
-        source: ["fpedia"],
+        source: [player.fonteDati || "fpedia"],
         editable: true,
         createdAt: now,
         updatedAt: now,
       });
     }
 
+    // Resto delle analisi esistenti...
     // ANALISI INFORTUNI
     if (player.infortunato) {
       notes.push({
@@ -55,7 +138,7 @@ export class NotesGenerator {
         category: "warning",
         content: `🚨 INFORTUNATO: Valuta attentamente il rischio. Potrebbe saltare le prime giornate.`,
         confidence: 100,
-        source: ["fpedia"],
+        source: [player.fonteDati || "fpedia"],
         editable: true,
         createdAt: now,
         updatedAt: now,
@@ -68,20 +151,7 @@ export class NotesGenerator {
         category: "warning",
         content: `⚠️ Resistenza infortuni bassa (${player.resistenzaInfortuni}/100). Storicamente fragile, considera il rischio.`,
         confidence: 75,
-        source: ["fpedia"],
-        editable: true,
-        createdAt: now,
-        updatedAt: now,
-      });
-    } else if (player.resistenzaInfortuni && player.resistenzaInfortuni > 80) {
-      notes.push({
-        id: `${baseId}-injury-resistant`,
-        playerId: player.id,
-        type: "auto",
-        category: "opportunity",
-        content: `💪 Molto resistente agli infortuni (${player.resistenzaInfortuni}/100). Affidabilità fisica eccellente.`,
-        confidence: 80,
-        source: ["fpedia"],
+        source: [player.fonteDati || "fpedia"],
         editable: true,
         createdAt: now,
         updatedAt: now,
@@ -100,172 +170,7 @@ export class NotesGenerator {
             1
           )}). Probabile titolare con più minutaggio rispetto al passato.`,
           confidence: 75,
-          source: ["fpedia"],
-          editable: true,
-          createdAt: now,
-          updatedAt: now,
-        });
-      } else {
-        notes.push({
-          id: `${baseId}-new-signing`,
-          playerId: player.id,
-          type: "auto",
-          category: "tactical",
-          content: `🆕 Nuovo acquisto. Periodo di adattamento possibile, ma potrebbe essere un'occasione se si ambienta bene.`,
-          confidence: 60,
-          source: ["fpedia"],
-          editable: true,
-          createdAt: now,
-          updatedAt: now,
-        });
-      }
-    }
-
-    // ANALISI VALORE/PREZZO
-    if (player.valorePrezzo && player.valorePrezzo > 150) {
-      notes.push({
-        id: `${baseId}-value-price`,
-        playerId: player.id,
-        type: "auto",
-        category: "opportunity",
-        content: `💰 Eccellente rapporto valore/prezzo (${player.valorePrezzo.toFixed(
-          1
-        )}). ${
-          player.quotazione ? `Quotato a soli ${player.quotazione}€!` : ""
-        } Potenziale affare dell'asta.`,
-        confidence: 85,
-        source: ["fpedia", "fstats"],
-        editable: true,
-        createdAt: now,
-        updatedAt: now,
-      });
-    }
-
-    // ANALISI PREVISIONI GOL/ASSIST
-    if (player.goalsMin && player.goalsMax) {
-      if (player.goalsMax > 15) {
-        notes.push({
-          id: `${baseId}-goals-prediction`,
-          playerId: player.id,
-          type: "auto",
-          category: "statistical",
-          content: `🎯 Previsione gol eccellente: ${player.goalsMin}-${player.goalsMax} gol previsti. Bomber certificato per la prossima stagione!`,
-          confidence: 85,
-          source: ["fpedia"],
-          editable: true,
-          createdAt: now,
-          updatedAt: now,
-        });
-      } else if (player.goalsMax > 10) {
-        notes.push({
-          id: `${baseId}-goals-prediction`,
-          playerId: player.id,
-          type: "auto",
-          category: "statistical",
-          content: `⚽ Buone previsioni realizzative: ${player.goalsMin}-${player.goalsMax} gol previsti. Potenziale da doppia cifra.`,
-          confidence: 75,
-          source: ["fpedia"],
-          editable: true,
-          createdAt: now,
-          updatedAt: now,
-        });
-      }
-    }
-
-    if (player.assistsMin && player.assistsMax && player.assistsMax > 5) {
-      notes.push({
-        id: `${baseId}-assists-prediction`,
-        playerId: player.id,
-        type: "auto",
-        category: "statistical",
-        content: `🎨 Ottimo per gli assist: ${player.assistsMin}-${player.assistsMax} assist previsti. Prezioso per i bonus.`,
-        confidence: 75,
-        source: ["fpedia"],
-        editable: true,
-        createdAt: now,
-        updatedAt: now,
-      });
-    }
-
-    // ANALISI METRICHE AVANZATE (FSTATS)
-    if (player.xG) {
-      if (player.xG > 15) {
-        notes.push({
-          id: `${baseId}-xg-excellent`,
-          playerId: player.id,
-          type: "auto",
-          category: "statistical",
-          content: `🎯 Expected Goals eccezionali (${player.xG.toFixed(
-            1
-          )} xG). Le statistiche suggeriscono un bomber vero.`,
-          confidence: 85,
-          source: ["fstats"],
-          editable: true,
-          createdAt: now,
-          updatedAt: now,
-        });
-      } else if (player.xG > 10) {
-        notes.push({
-          id: `${baseId}-xg-good`,
-          playerId: player.id,
-          type: "auto",
-          category: "statistical",
-          content: `📊 Buoni Expected Goals (${player.xG.toFixed(
-            1
-          )} xG). Potenziale realizzativo sopra la media.`,
-          confidence: 75,
-          source: ["fstats"],
-          editable: true,
-          createdAt: now,
-          updatedAt: now,
-        });
-      }
-    }
-
-    if (player.xA && player.xA > 8) {
-      notes.push({
-        id: `${baseId}-xa-high`,
-        playerId: player.id,
-        type: "auto",
-        category: "statistical",
-        content: `🎨 Expected Assists elevati (${player.xA.toFixed(
-          1
-        )} xA). Ottimo per i bonus assist.`,
-        confidence: 80,
-        source: ["fstats"],
-        editable: true,
-        createdAt: now,
-        updatedAt: now,
-      });
-    }
-
-    if (player.fantaindex) {
-      if (player.fantaindex > 85) {
-        notes.push({
-          id: `${baseId}-fantaindex-top`,
-          playerId: player.id,
-          type: "auto",
-          category: "statistical",
-          content: `🏆 Fantaindex TOP (${player.fantaindex.toFixed(
-            1
-          )}/100). Performance costanti e affidabili secondo le metriche avanzate.`,
-          confidence: 90,
-          source: ["fstats"],
-          editable: true,
-          createdAt: now,
-          updatedAt: now,
-        });
-      } else if (player.fantaindex > 70) {
-        notes.push({
-          id: `${baseId}-fantaindex-good`,
-          playerId: player.id,
-          type: "auto",
-          category: "statistical",
-          content: `📈 Fantaindex buono (${player.fantaindex.toFixed(
-            1
-          )}/100). Rendimento sopra la media.`,
-          confidence: 75,
-          source: ["fstats"],
+          source: [player.fonteDati || "fpedia"],
           editable: true,
           createdAt: now,
           updatedAt: now,
@@ -282,78 +187,7 @@ export class NotesGenerator {
         category: "warning",
         content: `🟨 Molti cartellini gialli (${player.yellowCards} nella scorsa stagione). Rischio squalifiche frequenti.`,
         confidence: 85,
-        source: ["fstats"],
-        editable: true,
-        createdAt: now,
-        updatedAt: now,
-      });
-    }
-
-    if (player.redCards && player.redCards > 1) {
-      notes.push({
-        id: `${baseId}-red-cards`,
-        playerId: player.id,
-        type: "auto",
-        category: "warning",
-        content: `🟥 ${player.redCards} espulsioni nella scorsa stagione. Giocatore falloso, attenzione!`,
-        confidence: 90,
-        source: ["fstats"],
-        editable: true,
-        createdAt: now,
-        updatedAt: now,
-      });
-    }
-
-    // ANALISI SOTTOVALUTATI (Sleeper)
-    if (
-      player.convenienzaPotenziale > 65 &&
-      player.presenzeCorrente < 20 &&
-      !player.infortunato
-    ) {
-      notes.push({
-        id: `${baseId}-sleeper`,
-        playerId: player.id,
-        type: "auto",
-        category: "opportunity",
-        content: `🚀 SLEEPER PICK: Alta convenienza (${player.convenienzaPotenziale.toFixed(
-          1
-        )}) ma poche presenze (${
-          player.presenzeCorrente
-        }). Potrebbe esplodere quest'anno!`,
-        confidence: 70,
-        source: ["fpedia", "fstats"],
-        editable: true,
-        createdAt: now,
-        updatedAt: now,
-      });
-    }
-
-    // ANALISI BUON INVESTIMENTO
-    if (player.buonInvestimento && player.buonInvestimento > 80) {
-      notes.push({
-        id: `${baseId}-good-investment`,
-        playerId: player.id,
-        type: "auto",
-        category: "opportunity",
-        content: `💰 Valutato come ottimo investimento (${player.buonInvestimento}/100). Rapporto qualità/prezzo eccellente.`,
-        confidence: 85,
-        source: ["fpedia"],
-        editable: true,
-        createdAt: now,
-        updatedAt: now,
-      });
-    }
-
-    // CONSIGLIATO PROSSIMA GIORNATA
-    if (player.consigliatoProssimaGiornata) {
-      notes.push({
-        id: `${baseId}-recommended-next`,
-        playerId: player.id,
-        type: "auto",
-        category: "tactical",
-        content: `⭐ Consigliato per la prossima giornata. Calendario favorevole o condizione ottimale.`,
-        confidence: 75,
-        source: ["fpedia"],
+        source: [player.fonteDati || "fstats"],
         editable: true,
         createdAt: now,
         updatedAt: now,
@@ -362,19 +196,23 @@ export class NotesGenerator {
 
     // ANALISI SKILLS SPECIALI
     if (player.skills && player.skills.length > 0) {
-      const skillsText = player.skills.join(", ");
-      notes.push({
-        id: `${baseId}-skills`,
-        playerId: player.id,
-        type: "auto",
-        category: "tactical",
-        content: `🎮 Skills speciali: ${skillsText}. Caratteristiche che lo rendono unico nel suo ruolo.`,
-        confidence: 80,
-        source: ["fpedia"],
-        editable: true,
-        createdAt: now,
-        updatedAt: now,
-      });
+      const importantSkills = ['Fuoriclasse', 'Titolare', 'Goleador', 'Rigorista'];
+      const hasImportantSkills = player.skills.some(s => importantSkills.includes(s));
+      
+      if (hasImportantSkills) {
+        notes.push({
+          id: `${baseId}-skills`,
+          playerId: player.id,
+          type: "auto",
+          category: "tactical",
+          content: `🎮 Skills importanti: ${player.skills.join(", ")}. Caratteristiche che lo rendono particolarmente prezioso.`,
+          confidence: 85,
+          source: [player.fonteDati || "fpedia"],
+          editable: true,
+          createdAt: now,
+          updatedAt: now,
+        });
+      }
     }
 
     return notes;
@@ -383,7 +221,73 @@ export class NotesGenerator {
   static generateWatchlists(players: Player[]): Watchlist[] {
     const watchlists: Watchlist[] = [];
 
-    // 1. TOP CONVENIENZA ASSOLUTA
+    // 1. SUPER AFFARI (NUOVO - basato su Score_Affare)
+    const superAffari = players
+      .filter((p) => p.scoreAffare && p.scoreAffare > 85)
+      .sort((a, b) => (b.scoreAffare || 0) - (a.scoreAffare || 0))
+      .slice(0, 20)
+      .map((p) => p.id);
+
+    if (superAffari.length > 0) {
+      watchlists.push({
+        id: "auto-super-affari",
+        name: "🏆 Super Affari",
+        type: "auto",
+        description: "I migliori affari secondo Score_Affare (>85)",
+        playerIds: superAffari,
+        priority: 10,
+        color: "#fbbf24",
+        icon: "🏆",
+        criteria: { minScoreAffare: 85 },
+      });
+    }
+
+    // 2. TOP PERFORMANCE (NUOVO - basato su Indice Aggiustato)
+    const topPerformance = players
+      .filter((p) => p.indiceAggiustato && p.indiceAggiustato > 85)
+      .sort((a, b) => (b.indiceAggiustato || 0) - (a.indiceAggiustato || 0))
+      .slice(0, 20)
+      .map((p) => p.id);
+
+    if (topPerformance.length > 0) {
+      watchlists.push({
+        id: "auto-top-performance",
+        name: "📊 Top Performance",
+        type: "auto",
+        description: "Migliori per Indice Aggiustato (>85)",
+        playerIds: topPerformance,
+        priority: 9,
+        color: "#8b5cf6",
+        icon: "📊",
+      });
+    }
+
+    // 3. DATI COMPLETI E AFFIDABILI (NUOVO)
+    const fullData = players
+      .filter((p) => 
+        p.fonteDati === 'Entrambe' && 
+        p.affidabilitaDati === 100 &&
+        p.convenienzaPotenziale > 65
+      )
+      .sort((a, b) => b.convenienzaPotenziale - a.convenienzaPotenziale)
+      .slice(0, 25)
+      .map((p) => p.id);
+
+    if (fullData.length > 0) {
+      watchlists.push({
+        id: "auto-full-data",
+        name: "✅ Dati Completi",
+        type: "auto",
+        description: "Giocatori con dati completi da entrambe le fonti",
+        playerIds: fullData,
+        priority: 8,
+        color: "#10b981",
+        icon: "✅",
+      });
+    }
+
+    // Watchlist esistenti migliorate...
+    // 4. TOP CONVENIENZA ASSOLUTA
     const topConvenienza = players
       .filter((p) => p.convenienzaPotenziale > 75)
       .sort((a, b) => b.convenienzaPotenziale - a.convenienzaPotenziale)
@@ -397,91 +301,10 @@ export class NotesGenerator {
         type: "auto",
         description: "I 20 giocatori con convenienza potenziale più alta (>75)",
         playerIds: topConvenienza,
-        priority: 10,
-        color: "#10b981",
+        priority: 9,
+        color: "#3b82f6",
         icon: "💎",
         criteria: { minConvenienza: 75 },
-      });
-    }
-
-    // 2. SLEEPER PICKS
-    const sleepers = players
-      .filter(
-        (p) =>
-          p.convenienzaPotenziale > 60 &&
-          p.convenienzaPotenziale < 75 &&
-          p.trend === "UP" &&
-          p.presenzeCorrente < 25 &&
-          !p.infortunato &&
-          (!p.resistenzaInfortuni || p.resistenzaInfortuni > 50)
-      )
-      .sort((a, b) => b.convenienzaPotenziale - a.convenienzaPotenziale)
-      .slice(0, 15)
-      .map((p) => p.id);
-
-    if (sleepers.length > 0) {
-      watchlists.push({
-        id: "auto-sleepers",
-        name: "🚀 Sleeper Picks",
-        type: "auto",
-        description: "Giocatori sottovalutati con alto potenziale di crescita",
-        playerIds: sleepers,
-        priority: 8,
-        color: "#8b5cf6",
-        icon: "🚀",
-        criteria: {
-          minConvenienza: 60,
-          maxConvenienza: 75,
-          trend: "UP",
-          infortunato: false,
-        },
-      });
-    }
-
-    // 3. NUOVI ACQUISTI DA MONITORARE
-    const newSignings = players
-      .filter(
-        (p) => p.nuovoAcquisto && p.fantamediaCorrente > 5.5 && !p.infortunato
-      )
-      .sort((a, b) => b.convenienzaPotenziale - a.convenienzaPotenziale)
-      .slice(0, 20)
-      .map((p) => p.id);
-
-    if (newSignings.length > 0) {
-      watchlists.push({
-        id: "auto-new-signings",
-        name: "🆕 Nuovi Acquisti",
-        type: "auto",
-        description: "Nuovi arrivi che potrebbero sorprendere",
-        playerIds: newSignings,
-        priority: 6,
-        color: "#3b82f6",
-        icon: "🆕",
-        criteria: { nuovoAcquisto: true, minFantamedia: 5.5 },
-      });
-    }
-
-    // 4. ALERT INFORTUNI
-    const injuryRisk = players
-      .filter(
-        (p) =>
-          p.infortunato || (p.resistenzaInfortuni && p.resistenzaInfortuni < 40)
-      )
-      .sort((a, b) => b.convenienzaPotenziale - a.convenienzaPotenziale)
-      .map((p) => p.id);
-
-    if (injuryRisk.length > 0) {
-      watchlists.push({
-        id: "auto-injury-risk",
-        name: "🚨 Rischio Infortuni",
-        type: "auto",
-        description:
-          "Giocatori infortunati o storicamente fragili - valuta con attenzione",
-        playerIds: injuryRisk,
-        priority: 3,
-        color: "#ef4444",
-        icon: "🚨",
-        criteria: { infortunato: true },
       });
     }
 
@@ -502,86 +325,37 @@ export class NotesGenerator {
         id: "auto-bombers",
         name: "⚽ Bomber",
         type: "auto",
-        description: "I migliori realizzatori della scorsa stagione",
+        description: "I migliori realizzatori",
         playerIds: bombers,
-        priority: 9,
+        priority: 7,
         color: "#f59e0b",
         icon: "⚽",
         criteria: { minGoals: 10 },
       });
     }
 
-    // 6. ASSIST-MAN
-    const assistmen = players
-      .filter((p) => (p.assists && p.assists > 7) || (p.xA && p.xA > 8))
-      .sort((a, b) => (b.assists || 0) - (a.assists || 0))
-      .slice(0, 15)
-      .map((p) => p.id);
-
-    if (assistmen.length > 0) {
-      watchlists.push({
-        id: "auto-assistmen",
-        name: "🎯 Assist-Man",
-        type: "auto",
-        description: "I migliori per gli assist",
-        playerIds: assistmen,
-        priority: 7,
-        color: "#06b6d4",
-        icon: "🎯",
-        criteria: { minAssists: 7 },
-      });
-    }
-
-    // 7. FANTAINDEX TOP
-    const fantaindexTop = players
-      .filter((p) => p.fantaindex && p.fantaindex > 75)
-      .sort((a, b) => (b.fantaindex || 0) - (a.fantaindex || 0))
-      .slice(0, 20)
-      .map((p) => p.id);
-
-    if (fantaindexTop.length > 0) {
-      watchlists.push({
-        id: "auto-fantaindex",
-        name: "📊 Fantaindex Top",
-        type: "auto",
-        description: "Migliori secondo le metriche avanzate (Fantaindex > 75)",
-        playerIds: fantaindexTop,
-        priority: 8,
-        color: "#7c3aed",
-        icon: "📊",
-        criteria: { minFantaindex: 75 },
-      });
-    }
-
-    // 8. OCCASIONI LAST MINUTE
-    const lastMinute = players
+    // 6. OCCASIONI BUDGET (con Score_Affare)
+    const budgetDeals = players
       .filter(
         (p) =>
-          p.convenienzaPotenziale > 50 &&
-          p.convenienzaPotenziale < 65 &&
-          !p.infortunato &&
-          p.fantamediaCorrente > 5
+          p.quotazione && p.quotazione <= 15 &&
+          ((p.scoreAffare && p.scoreAffare > 70) || p.convenienzaPotenziale > 60) &&
+          !p.infortunato
       )
-      .sort((a, b) => b.convenienzaPotenziale - a.convenienzaPotenziale)
+      .sort((a, b) => (b.scoreAffare || b.convenienzaPotenziale) - (a.scoreAffare || a.convenienzaPotenziale))
       .slice(0, 25)
       .map((p) => p.id);
 
-    if (lastMinute.length > 0) {
+    if (budgetDeals.length > 0) {
       watchlists.push({
-        id: "auto-last-minute",
+        id: "auto-budget-deals",
         name: "💰 Occasioni Budget",
         type: "auto",
-        description:
-          "Buoni giocatori per completare la rosa con budget limitato",
-        playerIds: lastMinute,
-        priority: 5,
+        description: "Ottimi giocatori sotto i 15€ con buon Score Affare",
+        playerIds: budgetDeals,
+        priority: 6,
         color: "#64748b",
         icon: "💰",
-        criteria: {
-          minConvenienza: 50,
-          maxConvenienza: 65,
-          minFantamedia: 5,
-        },
       });
     }
 

@@ -10,18 +10,18 @@ export interface Player {
   ruolo: Role;
   squadra: string;
   
-  // Quotazione e valore - NUOVI CAMPI
+  // Quotazione e valore
   quotazione?: number;
   valorePrezzo?: number;
   
-  // Statistiche da FPEDIA
+  // Statistiche principali
   convenienzaPotenziale: number;
   convenienza: number;
   punteggio: number;
   fantamediaCorrente: number;
   fantamediaPrecedente?: number;
-  fantavotoMedio?: number;  // NUOVO
-  fmTotGare?: number;        // NUOVO
+  fantavotoMedio?: number;
+  fmTotGare?: number;
   presenzeCorrente: number;
   presenzePrecedente?: number;
   
@@ -34,18 +34,25 @@ export interface Player {
   resistenzaInfortuni?: number;
   consigliatoProssimaGiornata?: boolean;
   
-  // Statistiche da FSTATS
+  // Statistiche dettagliate
   goals?: number;
   assists?: number;
-  goalsMin?: number;    // NUOVO
-  goalsMax?: number;    // NUOVO
-  assistsMin?: number;  // NUOVO
-  assistsMax?: number;  // NUOVO
+  goalsMin?: number;
+  goalsMax?: number;
+  assistsMin?: number;
+  assistsMax?: number;
   xG?: number;
   xA?: number;
   yellowCards?: number;
   redCards?: number;
   fantaindex?: number;
+  
+  // NUOVI CAMPI dal file unificato
+  scoreAffare?: number;        // Score_Affare
+  indiceUnificato?: number;     // Indice_Unificato
+  indiceAggiustato?: number;    // Indice_Aggiustato
+  affidabilitaDati?: number;    // Affidabilita_Dati (0-100)
+  fonteDati?: 'Entrambe' | 'fpedia' | 'fstats';  // Fonte_Dati
   
   // Stato durante l'asta
   status: PlayerStatus;
@@ -97,14 +104,15 @@ export interface PriceCalculation {
     fantaMedia: number;
   };
 }
+
 export interface PlayerNote {
   id: string;
   playerId: number;
   type: 'auto' | 'manual' | 'mixed';
   category: 'opportunity' | 'warning' | 'tactical' | 'statistical';
   content: string;
-  confidence: number;  // 0-100
-  source: string[];    // ['fpedia', 'fstats', 'user']
+  confidence: number;
+  source: string[];
   editable: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -135,4 +143,5 @@ export interface WatchlistCriteria {
   minxG?: number;
   minFantaindex?: number;
   maxPrice?: number;
+  minScoreAffare?: number;  // NUOVO
 }

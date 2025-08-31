@@ -7,7 +7,7 @@ import { Filter, SortDesc } from 'lucide-react';
 
 export function RoleFilter() {
   const [selectedRole, setSelectedRole] = useState<Role | 'ALL'>('ALL');
-  const [sortBy, setSortBy] = useState<'convenienza' | 'fantamedia' | 'presenze'>('convenienza');
+  const [sortBy, setSortBy] = useState<'scoreAffare' | 'convenienza' | 'fantamedia' | 'presenze'>('scoreAffare');
   const { players, selectPlayer } = useAuctionStore();
   
   const roles: Array<Role | 'ALL'> = ['ALL', 'P', 'D', 'C', 'A'];
@@ -18,6 +18,8 @@ export function RoleFilter() {
     .filter(p => selectedRole === 'ALL' || p.ruolo === selectedRole)
     .sort((a, b) => {
       switch (sortBy) {
+        case 'scoreAffare':
+          return (b.scoreAffare || 0) - (a.scoreAffare || 0);
         case 'convenienza':
           return b.convenienzaPotenziale - a.convenienzaPotenziale;
         case 'fantamedia':

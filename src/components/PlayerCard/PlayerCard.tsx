@@ -282,11 +282,40 @@ export function PlayerCard({ player }: PlayerCardProps) {
           </div>
         )}
         
-        {/* Statistiche aggiuntive se disponibili */}
-        {(player.xG || player.xA || player.fantaindex) && (
+{/* Statistiche aggiuntive se disponibili */}
+        {(player.xG || player.xA || player.fantaindex || player.scoreAffare || player.indiceAggiustato) && (
           <div className="mb-6 p-4 bg-gray-50 rounded-lg">
             <h4 className="font-semibold text-sm text-gray-600 mb-2">Metriche avanzate</h4>
             <div className="grid grid-cols-2 gap-4">
+              {player.scoreAffare && (
+                <div className="col-span-2 p-3 bg-gradient-to-r from-amber-50 to-yellow-50 rounded-lg border border-amber-200">
+                  <span className="text-sm text-gray-600 flex items-center gap-1">
+                    🏆 Score Affare
+                    {player.affidabilitaDati && player.affidabilitaDati < 100 && (
+                      <span className="text-xs text-gray-500">
+                        (affidabilità: {player.affidabilitaDati}%)
+                      </span>
+                    )}
+                  </span>
+                  <p className="font-bold text-2xl text-amber-700">
+                    {player.scoreAffare.toFixed(1)}
+                    <span className="text-sm font-normal text-gray-600">/100</span>
+                  </p>
+                </div>
+              )}
+              {player.indiceAggiustato && (
+                <div>
+                  <span className="text-sm text-gray-500">Indice Performance</span>
+                  <p className="font-semibold text-purple-600">
+                    {player.indiceAggiustato.toFixed(1)}
+                    {player.indiceUnificato && (
+                      <span className="text-xs text-gray-500 ml-1">
+                        (base: {player.indiceUnificato.toFixed(1)})
+                      </span>
+                    )}
+                  </p>
+                </div>
+              )}
               {player.xG && (
                 <div>
                   <span className="text-sm text-gray-500">Expected Goals (xG)</span>
@@ -303,6 +332,13 @@ export function PlayerCard({ player }: PlayerCardProps) {
                 <div>
                   <span className="text-sm text-gray-500">Fantaindex</span>
                   <p className="font-semibold">{player.fantaindex.toFixed(1)}</p>
+                </div>
+              )}
+              {player.fonteDati && (
+                <div className="col-span-2 text-center pt-2 border-t">
+                  <span className="text-xs text-gray-500">
+                    Fonte dati: {player.fonteDati === 'Entrambe' ? '✅ Completa (fpedia + fstats)' : player.fonteDati}
+                  </span>
                 </div>
               )}
             </div>
