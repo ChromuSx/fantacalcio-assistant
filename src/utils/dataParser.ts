@@ -63,78 +63,123 @@ function normalizeRole(role: string): Role {
 }
 
 function parseFpediaData(jsonData: any[]): Player[] {
-  return jsonData.map((row: any, index) => ({
-    id: index + 1,
-    nome: row['Nome'] || '',
-    ruolo: normalizeRole(row['Ruolo']),
-    squadra: row['Squadra'] || '',
+  return jsonData.map((row: any, index) => {
+    // Parsing Gol/Assist previsti (formato "min/max")
+    let goalsMin = 0, goalsMax = 0, assistsMin = 0, assistsMax = 0;
     
-    // Dati principali FPEDIA
-    convenienzaPotenziale: parseFloat(row['Convenienza Potenziale']) || 0,
-    convenienza: parseFloat(row['Convenienza']) || 0,
-    punteggio: parseFloat(row['Punteggio']) || 0,
+    if (row['Gol previsti'] && typeof row['Gol previsti'] === 'string') {
+      const parts = row['Gol previsti'].split('/');
+      goalsMin = parseInt(parts[0]) || 0;
+      goalsMax = parseInt(parts[1]) || goalsMin;
+    }
     
-    // Fantamedie
-    fantamediaCorrente: parseFloat(row['Fantamedia anno 2024-2025']) || 0,
-    fantamediaPrecedente: parseFloat(row['Fantamedia anno 2023-2024']) || 0,
-    presenzeCorrente: parseInt(row['Presenze campionato corrente']) || 0,
-    presenzePrecedente: parseInt(row['Partite giocate']) || 0,
+    if (row['Assist previsti'] && typeof row['Assist previsti'] === 'string') {
+      const parts = row['Assist previsti'].split('/');
+      assistsMin = parseInt(parts[0]) || 0;
+      assistsMax = parseInt(parts[1]) || assistsMin;
+    }
     
-    // Caratteristiche
-    trend: (row['Trend'] || 'STABLE') as Trend,
-    infortunato: row['Infortunato'] === true || row['Infortunato'] === 'True',
-    nuovoAcquisto: row['Nuovo acquisto'] === true || row['Nuovo acquisto'] === 'True',
-    buonInvestimento: parseInt(row['Buon investimento']) || 0,
-    resistenzaInfortuni: parseInt(row['Resistenza infortuni']) || 0,
-    consigliatoProssimaGiornata: row['Consigliato prossima giornata'] === true,
-    skills: row['Skills'] ? JSON.parse(row['Skills'].replace(/'/g, '"')) : [],
-    
-    // Previsioni
-    goals: parseInt(row['Gol previsti']) || 0,
-    assists: parseInt(row['Assist previsti']) || 0,
-    
-    // Stato
-    status: 'available' as PlayerStatus,
-    owner: undefined,
-    paidPrice: undefined
-  })).filter(p => p.nome && p.ruolo && ['P', 'D', 'C', 'A'].includes(p.ruolo));
+    return {
+      id: index + 1,
+      nome: row['Nome'] || '',
+      ruolo: normalizeRole(row['Ruolo']),
+      squadra: row['Squadra'] || '',
+      
+      // Quotazione e valore
+      quotazione: parseFloat(row['quotazione_attuale']) || 0,
+      valorePrezzo: parseFloat(row['Valore_su_Prezzo']) || 0,
+      
+      // Dati principali FPEDIA
+      convenienzaPotenziale: parseFloat(row['Convenienza Potenziale']) || 0,
+      convenienza: parseFloat(row['Convenienza']) || 0,
+      punteggio: parseFloat(row['Punteggio']) || 0,
+      
+      // Fantamedie
+      fantamediaCorrente: parseFloat(row['Fantamedia anno 2024-2025']) || 0,
+      fantamediaPrecedente: parseFloat(row['Fantamedia anno 2023-2024']) || 0,
+      fantavotoMedio: parseFloat(row['fantavoto_medio']) || 0,
+      fmTotGare: parseFloat(row['FM su tot gare 2024-2025']) || 0,
+      presenzeCorrente: parseInt(row['Presenze campionato corrente']) || 0,
+      presenzePrecedente: parseInt(row['Presenze 2024-2025']) || parseInt(row['Partite giocate']) || 0,
+      
+      // Caratteristiche
+      trend: (row['Trend'] || 'STABLE') as Trend,
+      infortunato: row['Infortunato'] === true || row['Infortunato'] === 'True',
+      nuovoAcquisto: row['Nuovo acquisto'] === true || row['Nuovo acquisto'] === 'True',
+      buonInvestimento: parseInt(row['Buon investimento']) || 0,
+      resistenzaInfortuni: parseInt(row['Resistenza infortuni']) || 0,
+      consigliatoProssimaGiornata: row['Consigliato prossima giornata'] === true,
+      skills: row['Skills'] ? JSON.parse(row['Skills'].replace(/'/g, '"')) : [],
+      
+      // Previsioni (con supporto per entrambi i formati)
+      goals: goalsMax || parseInt(row['Gol previsti']) || 0,
+      assists: assistsMax || parseInt(row['Assist previsti']) || 0,
+      goalsMin,
+      goalsMax,
+      assistsMin,
+      assistsMax,
+      
+      // Stato
+      status: 'available' as PlayerStatus,
+      owner: undefined,
+      paidPrice: undefined
+    };
+  }).filter(p => p.nome && p.ruolo && ['P', 'D', 'C', 'A'].includes(p.ruolo));
 }
 
 function parseFstatsData(jsonData: any[]): Player[] {
-  return jsonData.map((row: any, index) => ({
-    id: index + 1,
-    nome: row['Nome'] || '',
-    ruolo: normalizeRole(row['Ruolo']),
-    squadra: row['Squadra'] || '',
+  return jsonData.map((row: any, index) => {
+    // Parsing del campo squadra (può essere un oggetto JSON come stringa)
+    let squadra = row['Squadra'] || '';
+    if (squadra && squadra.includes('uuid')) {
+      try {
+        const squadraObj = JSON.parse(squadra.replace(/'/g, '"'));
+        squadra = squadraObj.name || '';
+      } catch (e) {
+        console.warn('Errore parsing squadra:', squadra);
+      }
+    }
     
-    // Dati principali FSTATS
-    convenienzaPotenziale: parseFloat(row['Convenienza Potenziale']) || 0,
-    convenienza: parseFloat(row['Convenienza']) || 0,
-    punteggio: 0, // Non presente in FSTATS
-    
-    // Statistiche
-    fantamediaCorrente: parseFloat(row['fanta_avg']) || 0,
-    presenzeCorrente: parseInt(row['presences']) || 0,
-    
-    // Stats avanzate
-    goals: parseInt(row['goals']) || 0,
-    assists: parseInt(row['assists']) || 0,
-    xG: parseFloat(row['xgFromOpenPlays']) || 0,
-    xA: parseFloat(row['xA']) || 0,
-    yellowCards: parseInt(row['yellowCards']) || 0,
-    redCards: parseInt(row['redCards']) || 0,
-    fantaindex: parseFloat(row['fantacalcioFantaindex']) || 0,
-    
-    // Default values per campi mancanti
-    trend: 'STABLE' as Trend,
-    infortunato: false,
-    nuovoAcquisto: false,
-    
-    // Stato
-    status: 'available' as PlayerStatus,
-    owner: undefined,
-    paidPrice: undefined
-  })).filter(p => p.nome && p.ruolo && ['P', 'D', 'C', 'A'].includes(p.ruolo));
+    return {
+      id: index + 1,
+      nome: row['Nome'] || '',
+      ruolo: normalizeRole(row['Ruolo']),
+      squadra: squadra,
+      
+      // Quotazione e valore
+      quotazione: parseFloat(row['quotazione_attuale']) || 0,
+      valorePrezzo: parseFloat(row['Valore_su_Prezzo']) || 0,
+      
+      // Dati principali FSTATS
+      convenienzaPotenziale: parseFloat(row['Convenienza Potenziale']) || 0,
+      convenienza: parseFloat(row['Convenienza']) || 0,
+      punteggio: 0, // Non presente in FSTATS
+      
+      // Statistiche
+      fantamediaCorrente: parseFloat(row['fanta_avg']) || 0,
+      fantavotoMedio: parseFloat(row['fantavoto_medio']) || 0,
+      presenzeCorrente: parseInt(row['presences']) || 0,
+      
+      // Stats avanzate
+      goals: parseInt(row['goals']) || 0,
+      assists: parseInt(row['assists']) || 0,
+      xG: parseFloat(row['xgFromOpenPlays']) || 0,
+      xA: parseFloat(row['xA']) || 0,
+      yellowCards: parseInt(row['yellowCards']) || 0,
+      redCards: parseInt(row['redCards']) || 0,
+      fantaindex: parseFloat(row['fantacalcioFantaindex']) || 0,
+      
+      // Default values per campi mancanti
+      trend: 'STABLE' as Trend,
+      infortunato: false,
+      nuovoAcquisto: false,
+      
+      // Stato
+      status: 'available' as PlayerStatus,
+      owner: undefined,
+      paidPrice: undefined
+    };
+  }).filter(p => p.nome && p.ruolo && ['P', 'D', 'C', 'A'].includes(p.ruolo));
 }
 
 export function mergePlayerData(fpediaData: Player[], fstatsData: Player[]): Player[] {
@@ -170,6 +215,14 @@ export function mergePlayerData(fpediaData: Player[], fstatsData: Player[]): Pla
         convenienzaPotenziale: fpediaPlayer.convenienzaPotenziale > 0 && fstatsPlayer.convenienzaPotenziale > 0
           ? (fpediaPlayer.convenienzaPotenziale + fstatsPlayer.convenienzaPotenziale) / 2
           : fpediaPlayer.convenienzaPotenziale || fstatsPlayer.convenienzaPotenziale,
+        
+        // Prendi la quotazione da FPEDIA se presente, altrimenti da FSTATS
+        quotazione: fpediaPlayer.quotazione || fstatsPlayer.quotazione,
+        
+        // Media del valore/prezzo se presente in entrambi
+        valorePrezzo: fpediaPlayer.valorePrezzo && fstatsPlayer.valorePrezzo
+          ? (fpediaPlayer.valorePrezzo + fstatsPlayer.valorePrezzo) / 2
+          : fpediaPlayer.valorePrezzo || fstatsPlayer.valorePrezzo,
       };
     }
     

@@ -10,12 +10,18 @@ export interface Player {
   ruolo: Role;
   squadra: string;
   
+  // Quotazione e valore - NUOVI CAMPI
+  quotazione?: number;
+  valorePrezzo?: number;
+  
   // Statistiche da FPEDIA
   convenienzaPotenziale: number;
   convenienza: number;
   punteggio: number;
   fantamediaCorrente: number;
   fantamediaPrecedente?: number;
+  fantavotoMedio?: number;  // NUOVO
+  fmTotGare?: number;        // NUOVO
   presenzeCorrente: number;
   presenzePrecedente?: number;
   
@@ -31,6 +37,10 @@ export interface Player {
   // Statistiche da FSTATS
   goals?: number;
   assists?: number;
+  goalsMin?: number;    // NUOVO
+  goalsMax?: number;    // NUOVO
+  assistsMin?: number;  // NUOVO
+  assistsMax?: number;  // NUOVO
   xG?: number;
   xA?: number;
   yellowCards?: number;

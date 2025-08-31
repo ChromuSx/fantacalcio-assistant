@@ -90,7 +90,14 @@ export function PlayerCard({ player }: PlayerCardProps) {
       )}>
         <div>
           <h2 className="text-2xl font-bold">{player.nome}</h2>
-          <p className="opacity-90">{player.squadra} - Ruolo: {player.ruolo}</p>
+          <p className="opacity-90">
+            {player.squadra} - Ruolo: {player.ruolo}
+            {player.quotazione && (
+              <span className="ml-3 px-2 py-1 bg-white/20 rounded text-sm">
+                📊 Quotazione: {player.quotazione}€
+              </span>
+            )}
+          </p>
           
           {/* Indicatori Note e Watchlist */}
           <div className="flex gap-2 mt-2">
@@ -155,6 +162,11 @@ export function PlayerCard({ player }: PlayerCardProps) {
             <p className="text-2xl font-bold text-blue-600">
               {player.fantamediaCorrente.toFixed(2)}
             </p>
+            {player.fmTotGare && (
+              <p className="text-xs text-gray-500 mt-1">
+                Tot: {player.fmTotGare.toFixed(2)}
+              </p>
+            )}
           </div>
           
           <div className="text-center p-3 bg-green-50 rounded-lg">
@@ -171,6 +183,11 @@ export function PlayerCard({ player }: PlayerCardProps) {
             <p className="text-2xl font-bold text-amber-600">
               {maxPrice}
             </p>
+            {player.valorePrezzo && (
+              <p className="text-xs text-gray-500 mt-1">
+                V/P: {player.valorePrezzo.toFixed(1)}
+              </p>
+            )}
           </div>
         </div>
         
@@ -210,13 +227,21 @@ export function PlayerCard({ player }: PlayerCardProps) {
             </span>
           )}
           
-          {player.goals && player.goals > 5 && (
+          {player.goalsMin && player.goalsMax ? (
+            <span className="inline-flex items-center gap-1 bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full text-sm">
+              ⚽ {player.goalsMin}-{player.goalsMax} gol previsti
+            </span>
+          ) : player.goals && player.goals > 5 && (
             <span className="inline-flex items-center gap-1 bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full text-sm">
               ⚽ {player.goals} gol
             </span>
           )}
-          
-          {player.assists && player.assists > 3 && (
+
+          {player.assistsMin && player.assistsMax ? (
+            <span className="inline-flex items-center gap-1 bg-cyan-100 text-cyan-800 px-3 py-1 rounded-full text-sm">
+              🎯 {player.assistsMin}-{player.assistsMax} assist previsti
+            </span>
+          ) : player.assists && player.assists > 3 && (
             <span className="inline-flex items-center gap-1 bg-cyan-100 text-cyan-800 px-3 py-1 rounded-full text-sm">
               🎯 {player.assists} assist
             </span>
